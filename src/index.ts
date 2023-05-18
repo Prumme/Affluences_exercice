@@ -22,21 +22,38 @@ app.get('/check', (req : any, res : any) => {
         return;
     }
 
-    axios.get('http://localhost:8080/reservations?date=2023-05-17&resourceId=1337'
+    axios.get('http://localhost:8080/reservations?date=2023-05-18&resourceId=1337'
     ).then((response : any) => {
         let reservations : any = response.data.reservations;
 
         for (let i = 0; i < reservations.length; i++) {
             let reservation : any = reservations[i];
             if (datetime.isAfter(reservation.reservationStart, 'minutes') && datetime.isBefore(reservation.reservationEnd, 'minutes')) {
-                console.log("not available")
                 available = false;
-                console.log(available)
+                break;
             }
-
         }
 
-        res.status(200).json({ "available": available });
+        axios.get('http://localhost:8080/timetables?date=2023-05-18&resourceId=1337'
+        ).then((response : any) => {
+            let timetables : any = response.data.timetables;
+            let open : boolean = response.data.open;
+
+            if (!open) {
+                available = false;
+            }
+
+            if(datetime.isBefore(timetables[0].opening, 'minutes') || datetime.isAfter(timetables[1].closing, 'minutes') || (datetime.isBefore(timetables[1].opening, 'minutes') && datetime.isAfter(timetables[0].closing, 'minutes'))) {
+                available = false;
+            }
+
+            res.status(200).json({ "available": available });
+            
+        }).catch((error : any) => {
+            console.log(error);
+            res.status(500).json({ "Error": "Internal Serveur Error" });
+        })
+
     }).catch((error : any) => {
         console.log(error);
         res.status(500).json({ "Error": "Internal Serveur Error" });
